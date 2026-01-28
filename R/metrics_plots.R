@@ -68,7 +68,7 @@ plot_ts_case <- function(years, B_true, C_true, I_obs, vline_year = NULL, main_t
     series = rep(c("Biomass", "20 x Index"), each = length(years))
   )
   p_bio <- ggplot2::ggplot(df_bio, ggplot2::aes(x = Year, y = value, color = series)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 1.6) +
     scale_y_zero() +
     ggplot2::labs(x = "Year", y = "Biomass", title = main_title, color = NULL) +
@@ -81,7 +81,7 @@ plot_ts_case <- function(years, B_true, C_true, I_obs, vline_year = NULL, main_t
 
   df_catch <- data.frame(Year = years, Catch = C_true)
   p_catch <- ggplot2::ggplot(df_catch, ggplot2::aes(x = Year, y = Catch)) +
-    ggplot2::geom_line(color = "black", size = 1) +
+    ggplot2::geom_line(color = "black", linewidth = 1) +
     ggplot2::geom_point(color = "black", size = 1.6) +
     scale_y_zero() +
     ggplot2::labs(x = "Year", y = "Catch") +
@@ -113,7 +113,7 @@ plot_true_vs_hat <- function(years, B_true, B_hat, main_title = "") {
   )
 
   p <- ggplot2::ggplot(df, ggplot2::aes(x = Year, y = Biomass, color = series)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 1.6) +
     scale_y_zero() +
     ggplot2::labs(x = "Year", y = "Biomass", title = main_title, color = NULL) +
@@ -145,7 +145,7 @@ plot_hockey_shape <- function(K_ref, beta = 0.8, Bban_ratio = 0.2, Blim_ratio = 
 
   df <- hcr_hockey_shape(B_seq, beta = beta, Bban = Bban, Blim = Blim)
   p <- ggplot2::ggplot(df, ggplot2::aes(x = B, y = h)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_vline(xintercept = c(Bban, Blim), linetype = 2, color = "gray40") +
     scale_y_zero() +
     ggplot2::labs(x = "Biomass", y = "Harvest rate", title = "Hockey-stick HCR") +
@@ -166,7 +166,7 @@ plot_2k_shape <- function(AAV_t = 0.2, BT = 0.8, PL = 0.7, PB = 0.0,
 
   df <- data.frame(D = D_seq, ABC_ratio = ABC_ratio)
   p <- ggplot2::ggplot(df, ggplot2::aes(x = D, y = ABC_ratio)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_vline(xintercept = c(PL * BT, PB * BT), linetype = 2, color = "gray40") +
     scale_y_zero() +
     ggplot2::labs(x = "D (standardized Index)", y = "ABC / Cbar", title = "Type2 rule") +

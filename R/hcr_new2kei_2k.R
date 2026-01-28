@@ -39,8 +39,7 @@ hcr_new2kei_2k <- function(C_obs, CPUE_obs, n = 5, BT = 0.8, PL = 0.7, PB = 0.0,
   if (D_t > BL) {
     k_t <- beta_2k
   } else if (D_t > BB && D_t <= BL) {
-    # NOTE: 元資料の曖昧な肩付き等は省略し、log(AAV_t + 1) を採用
-    k_t <- beta_2k + delta * exp(lambda * log(AAV_t + 1)) * (BL - D_t) / (D_t - BB)
+    k_t <- beta_2k + delta * exp(lambda * log(AAV_t^2 + 1)) * (BL - D_t) / (D_t - BB)
   } else {
     k_t <- Inf
   }
@@ -80,7 +79,7 @@ hcr_new2kei_2k_from_D <- function(D_t, AAV_t = 0.2, Cbar_t = 1,
   if (D_t > BL) {
     k_t <- beta_2k
   } else if (D_t > BB && D_t <= BL) {
-    k_t <- beta_2k + delta * exp(lambda * log(AAV_t + 1)) * (BL - D_t) / (D_t - BB)
+    k_t <- beta_2k + delta * exp(lambda * log(AAV_t^2 + 1)) * (BL - D_t) / (D_t - BB)
   } else {
     k_t <- Inf
   }
