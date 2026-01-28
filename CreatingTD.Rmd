@@ -1,0 +1,711 @@
+---
+title: "CreatingTD"
+author: "Rentaro Mitsuyu"
+date: "2024-07-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#rm(list =ls())
+set.seed(2024)
+sigma.CPUE <- 0.1
+
+r <- 0.8
+K <- 1000
+D1 <- 0.5
+shape <- 2
+q <- 0.05
+TTYear <- 50
+CR<- 0.3
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*runif(1,0.7,1.5)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*runif(1,0.7,1.5)
+  B[t] <- tmpB[t]-Catch[t]
+}
+
+cpue <- q*B
+error <- rnorm(n = length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:25] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="l")
+plot(data$CPUE/q, data$Biomass)
+
+
+```
+アカハタ、オオモンハタ、アオノメハタの順でsigma.CPUEを上げる。
+
+アカハタのデータ作成
+```{r}
+set.seed(2024)
+sigma.CPUE <- 0.1
+
+r <- 0.8
+K <- 1000
+D1 <- 0.5
+shape <- 2
+q <- 0.05
+TTYear <- 50
+CR<- 0.3
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*runif(1,0.7,1.5)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*runif(1,0.7,1.5)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n = length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:25] <- NA
+plot(data$Biomass, type="l")
+plot(data$CPUE, data$Biomass)
+#write.csv(data, "Data/redG.csv", row.names = FALSE)
+```
+
+
+オオモンハタのデータ作成
+```{r}
+set.seed(2025)
+sigma.CPUE <- 0.5
+
+r <- 0.8
+K <- 1000
+D1 <- 0.5
+shape <- 2
+q <- 0.05
+TTYear <- 50
+CR<- 0.3
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*runif(1,0.7,1.5)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*runif(1,0.7,1.5)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n = length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:25] <- NA
+plot(data$Biomass, type="l")
+plot(data$CPUE, data$Biomass)
+#write.csv(data, "Data/areolateG.csv", row.names = FALSE)
+```
+
+アオノメハタのデータ作成
+```{r}
+set.seed(2026)
+sigma.CPUE <- 0.8
+
+r <- 0.8
+K <- 1000
+D1 <- 0.5
+shape <- 2
+q <- 0.05
+TTYear <- 50
+CR<- 0.3
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*runif(1,0.7,1.5)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*runif(1,0.7,1.5)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n = length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:25] <- NA
+plot(data$Biomass, type="l")
+plot(data$CPUE, data$Biomass)
+#write.csv(data, "Data/bluespottedG.csv", row.names = FALSE)
+
+
+```
+
+アカハタのデータ作成(シェーファー)
+```{r}
+set.seed(2024)
+sigma.CPUE <- 0.1
+K <- 3000
+CR<- 0.3
+D1 <- 0.6
+
+r <- 0.8
+shape <- 1
+q <- 0.05
+TTYear <- 50
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*rnorm(1,1,0.1)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*rnorm(1,1,0.1)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n = length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+#write.csv(data, "Data/redG2.csv", row.names = FALSE)
+```
+オオモンハタのデータ作成(シェーファー)
+```{r}
+set.seed(2024)
+sigma.CPUE <- 0.3
+K <- 2000
+CR<- 0.2
+D1 <- 0.7
+
+r <- 0.8
+shape <- 1
+q <- 0.05
+TTYear <- 50
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*rnorm(1,1,0.1)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*rnorm(1,1,0.1)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n =length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+#write.csv(data, "Data/areolateG2.csv", row.names = FALSE)
+```
+アオノメハタのデータ作成(シェーファー)
+```{r}
+set.seed(2024)
+sigma.CPUE <- 0.5
+K <- 1000
+CR<- 0.1
+D1 <- 0.9
+
+r <- 0.8
+shape <- 1
+q <- 0.05
+TTYear <- 50
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*rnorm(1,1,0.1)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*rnorm(1,1,0.1)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n =length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+#write.csv(data, "Data/bluespottedG2.csv", row.names = FALSE)
+```
+
+0722
+
+アカハタのデータ作成(ペラトムリンソン)
+```{r}
+set.seed(2024)
+sigma.CPUE <- 0.1
+K <- 3000
+CR<- 0.3
+D1 <- 0.6
+
+r <- 0.8
+shape <- 0.5
+q <- 0.05
+TTYear <- 50
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*rnorm(1,1,0.1)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*rnorm(1,1,0.1)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n = length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+plot(data$Biomass/K, type="l")
+#write.csv(data, "Data/redGz.csv", row.names = FALSE)
+```
+オオモンハタのデータ作成(ペラトムリンソン)
+```{r}
+set.seed(2024)
+sigma.CPUE <- 0.3
+K <- 2000
+CR<- 0.2
+D1 <- 0.7
+
+r <- 0.8
+shape <- 0.5
+q <- 0.05
+TTYear <- 50
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*rnorm(1,1,0.1)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*rnorm(1,1,0.1)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n =length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+plot(data$Biomass/K, type="l")
+#write.csv(data, "Data/areolateGz.csv", row.names = FALSE)
+```
+アオノメハタのデータ作成(ペラトムリンソン)
+```{r}
+set.seed(2024)
+sigma.CPUE <- 0.5
+K <- 1000
+CR<- 0.1
+D1 <- 0.9
+
+r <- 0.8
+shape <- 0.5
+q <- 0.05
+TTYear <- 50
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*CR*rnorm(1,1,0.1)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*CR*rnorm(1,1,0.1)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n =length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+plot(data$Biomass/K, type="l")
+#write.csv(data, "Data/bluespottedGz.csv", row.names = FALSE)
+```
+
+
+
+0731
+データ作成1(ペラトムリンソン)
+```{r}
+set.seed(2024)
+sigma.CPUE <- 0.1
+K <- 3000
+D1 <- 0.6
+
+r <- 0.8
+shape <- 0.5
+q <- 0.05
+TTYear <- 50
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*runif(1,0.1,0.7)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*runif(1,0.0,0.4)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n = length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+plot(data$Biomass/K, type="l")
+write.csv(data, "Data/0731_1.csv", row.names = FALSE)
+```
+
+データ作成2(ペラトムリンソン)
+```{r}
+set.seed(2025)
+sigma.CPUE <- 0.1
+K <- 2000
+CR<- 0.2
+D1 <- 0.7
+
+r <- 0.8
+shape <- 0.5
+q <- 0.05
+TTYear <- 50
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*runif(1,0.1,0.7)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*runif(1,0.0,0.4)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n =length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+plot(data$Biomass/K, type="l")
+write.csv(data, "Data/0731_2.csv", row.names = FALSE)
+```
+
+データ作成3(ペラトムリンソン)
+```{r}
+set.seed(2026)
+sigma.CPUE <- 0.1
+K <- 1000
+CR<- 0.1
+D1 <- 0.9
+
+r <- 0.8
+shape <- 0.5
+q <- 0.05
+TTYear <- 50
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*runif(1,0.1,0.7)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*runif(1,0.0,0.4)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n =length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+plot(data$Biomass/K, type="l")
+write.csv(data, "Data/0731_3.csv", row.names = FALSE)
+```
+
+データ作成4(ペラトムリンソン)
+```{r}
+set.seed(2027)
+sigma.CPUE <- 0.2
+K <- 4000
+CR<- 0.1
+D1 <- 0.9
+
+r <- 0.8
+shape <- 0.5
+q <- 0.05
+TTYear <- 50
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*runif(1,0.1,0.7)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*runif(1,0.0,0.4)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n =length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+plot(data$Biomass/K, type="l")
+write.csv(data, "Data/0731_4.csv", row.names = FALSE)
+```
+
+データ作成5(ペラトムリンソン)
+```{r}
+set.seed(2028)
+sigma.CPUE <- 0.3
+K <- 1500
+CR<- 0.1
+D1 <- 0.7
+
+r <- 0.8
+shape <- 0.5
+q <- 0.05
+TTYear <- 50
+
+
+B <- rep(NA, TTYear)
+tmpB <- rep(NA, TTYear)
+Catch <- rep(NA, TTYear)
+
+
+B[1] <- D1*K
+Catch[1] <- B[1]*runif(1,0.1,0.7)
+
+for(t in 2:TTYear){
+  tmpB[t] <- B[t-1]+r*B[t-1]*(1-(B[t-1]/K)^shape)
+  Catch[t] <- tmpB[t]*runif(1,0.0,0.4)
+  B[t] <- tmpB[t]-Catch[t]
+}
+  
+cpue <- q*B
+error <- rnorm(n =length(cpue),-(sigma.CPUE^2)/2,sigma.CPUE)
+cpue_obs <- cpue * exp(error)
+
+data <- data.frame(
+  Year = 1975:2024,
+  Biomass = B,
+  Catch = Catch,
+  CPUE = cpue_obs
+)
+data$CPUE[1:10] <- NA
+plot(data$Biomass, type="l")
+plot(data$Catch, type="b")
+plot(data$CPUE/q, data$Biomass)
+plot(data$Catch/K, type="l")
+plot(data$Catch/data$Biomass, type="l")
+plot(data$Biomass/K, type="l")
+write.csv(data, "Data/0731_5.csv", row.names = FALSE)
+```
