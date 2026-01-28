@@ -102,7 +102,11 @@ plot_ts_case <- function(years, B_true, C_true, I_obs, vline_year = NULL, main_t
     p_index <- p_index + ggplot2::geom_vline(xintercept = vline_year, linetype = 2, color = "gray40")
   }
 
-  draw_gg_stack(list(p_bio, p_catch, p_index))
+  print(p_bio)
+  print(p_catch)
+  print(p_index)
+  
+  invisible(list(p_bio = p_bio, p_catch = p_catch, p_index = p_index))
 }
 
 plot_true_vs_hat <- function(years, B_true, B_hat, main_title = "") {
