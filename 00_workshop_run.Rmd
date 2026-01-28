@@ -28,6 +28,7 @@ source("R/fit_schaefer_ml.R")
 source("R/hcr_hockey_stick.R")
 source("R/hcr_new2kei_2k.R")
 source("R/metrics_plots.R")
+source("R/mse_loop.R")
 
 # 出力フォルダ
 out_fig <- file.path("output", "fig")
@@ -330,106 +331,31 @@ abc_ratio_cap <- 1.5  # 例：Type2のABC/Cbar上限相当
 clamp_2k <- log(abc_ratio_cap)
 
 # ------- hockey -------
-B_true_h <- rep(NA_real_, TTYear)
-C_true_h <- rep(NA_real_, TTYear)
-C_obs_h <- rep(NA_real_, TTYear)
-I_obs_h <- rep(NA_real_, TTYear)
-B_hat_h <- rep(NA_real_, TTYear)
-fit_success_h <- rep(FALSE, TTYear)
+h_out <- mse_loop(
+  TTYear = TTYear, r = r, K = K, B1 = B1, q = q, sigma_CPUE = sigma_CPUE,
+  CR_init = CR, management_start = management_start,
+  hcr_type = "hockey",
+  hcr_par = list(beta = beta_hcr, Bban_ratio = 0.3, Blim_ratio = 0.6, K_ref_type = "true"),
+  use_cpp = use_cpp
+)
 
-B_true_h[1] <- B1
-C_true_h[1] <- CR * F_mult_pre[1] * B_true_h[1]
-
-for (t in 1:(TTYear - 1)) {
-  # 1) OM
-  B_true_h[t + 1] <- om_step_schaefer(B_true_h[t], C_true_h[t], r, K)
-
-  # 2) Obs
-  obs_t <- obs_cpue_lognormal(B_true_h[t], q, sigma_CPUE)
-  I_obs_h[t] <- obs_t$I_obs
-  C_obs_h[t] <- C_true_h[t]
-
-  # 3) Assess + 4) HCR
-  if (t >= management_start) {
-    assess <- if (use_cpp) fit_schaefer_ml_cpp(C_obs_h[1:t], I_obs_h[1:t]) else fit_schaefer_ml(C_obs_h[1:t], I_obs_h[1:t])
-
-    if (isTRUE(assess$success) && is.finite(assess$B_hat[t])) {
-      fit_success_h[t] <- TRUE
-      B_hat_h[t] <- assess$B_hat[t]
-    } else {
-      # 失敗時は真値にフォールバック（教材用の安定化）
-      B_hat_h[t] <- B_true_h[t]
-    }
-
-    # Hockey-stickは固定値を使う
-    Bban <- 0.3 * K
-    Blim <- 0.6 * K
-    h_out <- hcr_hockey_stick(B_hat_h[t], beta = beta_hcr, Bban = Bban, Blim = Blim)
-    C_next <- h_out$C_next
-
-
-    # 失敗時のガード
-    if (!is.finite(C_next) || C_next < 0) C_next <- C_true_h[t]
-    C_true_h[t + 1] <- C_next
-  } else {
-    # 管理開始前はFの揺らぎを反映
-    C_true_h[t + 1] <- CR * F_mult_pre[t + 1] * B_true_h[t + 1]
-  }
-}
-
-# 最終年の観測
-obs_last <- obs_cpue_lognormal(B_true_h[TTYear], q, sigma_CPUE)
-I_obs_h[TTYear] <- obs_last$I_obs
-C_obs_h[TTYear] <- C_true_h[TTYear]
+B_true_h <- h_out$B_true
+C_true_h <- h_out$C_true
+I_obs_h <- h_out$I_obs
 
 # ------- Type2 -------
-B_true_2k <- rep(NA_real_, TTYear)
-C_true_2k <- rep(NA_real_, TTYear)
-C_obs_2k <- rep(NA_real_, TTYear)
-I_obs_2k <- rep(NA_real_, TTYear)
-B_hat_2k <- rep(NA_real_, TTYear)
-fit_success_2k <- rep(FALSE, TTYear)
+t2_out <- mse_loop(
+  TTYear = TTYear, r = r, K = K, B1 = B1, q = q, sigma_CPUE = sigma_CPUE,
+  CR_init = CR, management_start = management_start,
+  hcr_type = "2k",
+  hcr_par = list(n = 5, BT = 0.75, PL = 0.7, PB = 0.0,
+                 beta_2k = beta_hcr, delta = 0.3, lambda = 0.3, clamp = clamp_2k),
+  use_cpp = use_cpp
+)
 
-B_true_2k[1] <- B1
-C_true_2k[1] <- CR * F_mult_pre[1] * B_true_2k[1]
-
-for (t in 1:(TTYear - 1)) {
-  # 1) OM
-  B_true_2k[t + 1] <- om_step_schaefer(B_true_2k[t], C_true_2k[t], r, K)
-
-  # 2) Obs
-  obs_t <- obs_cpue_lognormal(B_true_2k[t], q, sigma_CPUE)
-  I_obs_2k[t] <- obs_t$I_obs
-  C_obs_2k[t] <- C_true_2k[t]
-
-  # 3) Assess + 4) HCR
-  if (t >= management_start) {
-    assess <- if (use_cpp) fit_schaefer_ml_cpp(C_obs_2k[1:t], I_obs_2k[1:t]) else fit_schaefer_ml(C_obs_2k[1:t], I_obs_2k[1:t])
-
-    if (isTRUE(assess$success)) {
-      fit_success_2k[t] <- TRUE
-      B_hat_2k[t] <- assess$B_hat[t]
-    }
-
-    h_out <- hcr_new2kei_2k(C_obs_2k[1:t], I_obs_2k[1:t],
-                            n = 5, BT = 0.75, PL = 0.7, PB = 0.0,
-                            beta_2k = beta_hcr, delta = 0.3, lambda = 0.3, clamp = clamp_2k)
-    C_next <- h_out$ABC_t
-
-
-    # 失敗時のガード
-    if (!is.finite(C_next) || C_next < 0) C_next <- C_true_2k[t]
-    C_true_2k[t + 1] <- C_next
-  } else {
-    # 管理開始前はFの揺らぎを反映
-    C_true_2k[t + 1] <- CR * F_mult_pre[t + 1] * B_true_2k[t + 1]
-  }
-}
-
-# 最終年の観測
-obs_last <- obs_cpue_lognormal(B_true_2k[TTYear], q, sigma_CPUE)
-I_obs_2k[TTYear] <- obs_last$I_obs
-C_obs_2k[TTYear] <- C_true_2k[TTYear]
+B_true_2k <- t2_out$B_true
+C_true_2k <- t2_out$C_true
+I_obs_2k <- t2_out$I_obs
 
 # 指標計算
 mse_sum_h <- calc_mse_metrics(B_true_h, C_true_h, K_true = K, management_start = management_start)
