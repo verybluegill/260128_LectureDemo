@@ -1,4 +1,4 @@
-﻿---
+---
 title: "Schaefer / HCR / MSE Workshop"
 output: html_document
 date: "`r Sys.Date()`"
@@ -17,7 +17,7 @@ set.seed(123)
 options(stringsAsFactors = FALSE)
 
 if (!requireNamespace("ggplot2", quietly = TRUE)) {
-  stop("ggplot2 が必要です。")
+  stop("ggplot2 が未インストールです。")
 }
 library(ggplot2)
 
@@ -35,10 +35,10 @@ out_tab <- file.path("output", "tab")
 dir.create(out_fig, recursive = TRUE, showWarnings = FALSE)
 dir.create(out_tab, recursive = TRUE, showWarnings = FALSE)
 
-# 高速化の設定（Rcppが無い場合は自動でR版にフォールバック）
+# 高速化の設定（Rcppが無い場合はR版にフォールバック）
 use_cpp <- TRUE
 if (use_cpp && !requireNamespace("Rcpp", quietly = TRUE)) {
-  message("Rcpp が見つからないため、use_cpp = FALSE にします。")
+  message("Rcpp が未インストールのため、use_cpp = FALSE にします。")
   use_cpp <- FALSE
 }
 ```
@@ -83,7 +83,7 @@ save_png(file.path(out_fig, "case_timeseries.png"), width = 900, height = 900, p
   plot_ts_case(Year, B_true, Catch, index_obs, main_title = "Single-case OM + Obs")
 })
 
-# 画面にも表示（RMD用）
+# 画面にも表示（Rmd用）
 plot_ts_case(Year, B_true, Catch, index_obs, main_title = "Single-case OM + Obs")
 ```
 
@@ -99,12 +99,12 @@ fit <- if (use_cpp) fit_schaefer_ml_cpp(Catch_obs, index_obs) else fit_schaefer_
 # 推定の成否
 cat("Fit success:", fit$success, "  converged:", fit$converged, "\n")
 
-# 真値と推定の比較（B系列）
+# 真値と推定値の比較（時系列）
 save_png(file.path(out_fig, "fit_biomass.png"), width = 900, height = 600, plot_fun = function() {
   plot_true_vs_hat(Year, B_true, fit$B_hat, main_title = "True vs Estimated Biomass")
 })
 
-# 画面にも表示（RMD用）
+# 画面にも表示（Rmd用）
 plot_true_vs_hat(Year, B_true, fit$B_hat, main_title = "True vs Estimated Biomass")
 
 # パラメータ表（真値と推定値）
@@ -116,84 +116,144 @@ fit_table <- data.frame(
 fit_table
 write.csv(fit_table, file.path(out_tab, "fit_params.csv"), row.names = FALSE)
 ```
-# 4) 感度解析（TTYear × sigma_CPUE）
+# 4) 簡易感度解析（最小限）
 
 ```{r}
-TTYear_vec <- c(30, 50, 100)
-sigma_vec <- c(0.05, 0.10, 0.20, 0.30, 0.50)
-nrep <- 20  # 計算負荷を下げるため少なめ
+# わかりやすさ優先で、最小限の設定だけ動かす
+do_sensitivity <- TRUE
 
-sens_list <- list()
-idx <- 1
+if (do_sensitivity) {
+# TRUEで実行（必要ならFALSEにする）
+  do_sens_TT <- TRUE          # 時系列の長さ
+  do_sens_sigma <- TRUE       # sigmaの違い
+  do_sens_catch_under <- TRUE # Catch過小報告
 
-for (TT in TTYear_vec) {
-  # Fの揺らぎを入れるためB_trueも変動（Indexは乱数）
-  F_mult_tmp <- rlnorm(TT, meanlog = -0.5 * sigma_F^2, sdlog = sigma_F)
-  om_tmp <- om_schaefer_sim(TTYear = TT, r = r, K = K, B1 = D1 * K, CR = CR, CR_mult = F_mult_tmp)
+  # 感度解析用：1ケース分の推定B時系列を作る
+  run_sens_ts <- function(TT, sigma_CPUE, catch_report = 1, seed = NULL) {
+    if (!is.null(seed)) set.seed(seed)
+    F_mult_tmp <- rlnorm(TT, meanlog = -0.5 * sigma_F^2, sdlog = sigma_F)
+    om_tmp <- om_schaefer_sim(TTYear = TT, r = r, K = K, B1 = D1 * K, CR = CR, CR_mult = F_mult_tmp)
+    obs_tmp <- obs_cpue_lognormal(om_tmp$B_true, q, sigma_CPUE)
+    C_obs_tmp <- om_tmp$C_true * catch_report
+    fit_tmp <- if (use_cpp) fit_schaefer_ml_cpp(C_obs_tmp, obs_tmp$I_obs) else fit_schaefer_ml(C_obs_tmp, obs_tmp$I_obs)
 
-  for (sg in sigma_vec) {
-    for (rep in 1:nrep) {
-      obs_tmp <- obs_cpue_lognormal(om_tmp$B_true, q, sg)
-      fit_tmp <- if (use_cpp) fit_schaefer_ml_cpp(om_tmp$C_true, obs_tmp$I_obs) else fit_schaefer_ml(om_tmp$C_true, obs_tmp$I_obs)
+    if (isTRUE(fit_tmp$success)) {
+      B_hat_tmp <- fit_tmp$B_hat
+    } else {
+      B_hat_tmp <- rep(NA_real_, TT)
+    }
 
-      if (isTRUE(fit_tmp$success)) {
-        rmse_b <- calc_rmse(fit_tmp$B_hat, om_tmp$B_true)
-        relerr <- calc_relerr_final(fit_tmp$B_hat, om_tmp$B_true)
-        success <- 1
-      } else {
-        rmse_b <- NA_real_
-        relerr <- NA_real_
-        success <- 0
-      }
+    data.frame(
+      Year = 1:TT,
+      B_hat = B_hat_tmp,
+      B_true = om_tmp$B_true,
+      TTYear = TT,
+      sigma_CPUE = sigma_CPUE,
+      catch_report = catch_report
+    )
+  }
 
-      sens_list[[idx]] <- data.frame(
-        TTYear = TT,
-        sigma_CPUE = sg,
-        rep = rep,
-        RMSE_B = rmse_b,
-        RelErr_final = relerr,
-        success = success
-      )
+  sens_ts_list <- list()
+  idx <- 1
+
+  if (do_sens_TT) {
+    # 時系列の長さ違い
+    TT_vec <- c(30, 50)
+    for (TT in TT_vec) {
+      df_tmp <- run_sens_ts(TT, sigma_CPUE = 0.1, catch_report = 1, seed = 100 + TT)
+      df_tmp$Group <- "TTYear"
+      df_tmp$Scenario <- paste0("TTYear=", TT)
+      sens_ts_list[[idx]] <- df_tmp
       idx <- idx + 1
     }
   }
+
+  if (do_sens_sigma) {
+    # sigmaの違い
+    sigma_vec <- c(0.10, 0.30)
+    for (sg in sigma_vec) {
+      df_tmp <- run_sens_ts(TTYear, sigma_CPUE = sg, catch_report = 1, seed = 200 + round(sg * 100))
+      df_tmp$Group <- "Sigma"
+      df_tmp$Scenario <- paste0("sigma=", sg)
+      sens_ts_list[[idx]] <- df_tmp
+      idx <- idx + 1
+    }
+  }
+
+  if (do_sens_catch_under) {
+    # Catch過小報告（例：70%報告）
+    report_vec <- c(1.0, 0.7)
+    for (rp in report_vec) {
+      df_tmp <- run_sens_ts(TTYear, sigma_CPUE = 0.1, catch_report = rp, seed = 300 + round(rp * 100))
+      df_tmp$Group <- "CatchUnder"
+      df_tmp$Scenario <- paste0("report=", rp)
+      sens_ts_list[[idx]] <- df_tmp
+      idx <- idx + 1
+    }
+  }
+
+  sens_ts_df <- do.call(rbind, sens_ts_list)
+
+  # TTYear
+  if (do_sens_TT) {
+    df_tt <- subset(sens_ts_df, Group == "TTYear")
+    save_png(file.path(out_fig, "sensitivity_ts_TTYear.png"), width = 900, height = 600, plot_fun = function() {
+      p_tt <- ggplot(df_tt, aes(x = Year, y = B_hat, color = Scenario)) +
+        geom_line(size = 1) +
+        labs(x = "Year", y = "Estimated biomass", title = "Sensitivity: TTYear") +
+        theme_minimal(base_size = 12)
+      print(p_tt)
+    })
+    p_tt <- ggplot(df_tt, aes(x = Year, y = B_hat, color = Scenario)) +
+      geom_line(size = 1) +
+      labs(x = "Year", y = "Estimated biomass", title = "Sensitivity: TTYear") +
+      theme_minimal(base_size = 12)
+    print(p_tt)
+  }
+
+  # sigma
+  if (do_sens_sigma) {
+    df_sg <- subset(sens_ts_df, Group == "Sigma")
+    save_png(file.path(out_fig, "sensitivity_ts_sigma.png"), width = 900, height = 600, plot_fun = function() {
+      p_sg <- ggplot(df_sg, aes(x = Year, y = B_hat, color = Scenario)) +
+        geom_line(size = 1) +
+        labs(x = "Year", y = "Estimated biomass", title = "Sensitivity: sigma") +
+        theme_minimal(base_size = 12)
+      print(p_sg)
+    })
+    p_sg <- ggplot(df_sg, aes(x = Year, y = B_hat, color = Scenario)) +
+      geom_line(size = 1) +
+      labs(x = "Year", y = "Estimated biomass", title = "Sensitivity: sigma") +
+      theme_minimal(base_size = 12)
+    print(p_sg)
+  }
+
+  # Catch過小報告
+  if (do_sens_catch_under) {
+    df_cu <- subset(sens_ts_df, Group == "CatchUnder")
+    save_png(file.path(out_fig, "sensitivity_ts_catch_under.png"), width = 900, height = 600, plot_fun = function() {
+      p_cu <- ggplot(df_cu, aes(x = Year, y = B_hat, color = Scenario)) +
+        geom_line(size = 1) +
+        labs(x = "Year", y = "Estimated biomass", title = "Sensitivity: underreported catch") +
+        theme_minimal(base_size = 12)
+      print(p_cu)
+    })
+    p_cu <- ggplot(df_cu, aes(x = Year, y = B_hat, color = Scenario)) +
+      geom_line(size = 1) +
+      labs(x = "Year", y = "Estimated biomass", title = "Sensitivity: underreported catch") +
+      theme_minimal(base_size = 12)
+    print(p_cu)
+  }
+} else {
+  cat("簡易感度解析をスキップしました。\n")
 }
-
-sens_df <- do.call(rbind, sens_list)
-
-# まとめ表
-sens_summary <- aggregate(RMSE_B ~ TTYear + sigma_CPUE, data = sens_df, FUN = function(x) mean(x, na.rm = TRUE))
-colnames(sens_summary)[3] <- "RMSE_B_mean"
-
-sens_summary_sd <- aggregate(RMSE_B ~ TTYear + sigma_CPUE, data = sens_df, FUN = function(x) sd(x, na.rm = TRUE))
-colnames(sens_summary_sd)[3] <- "RMSE_B_sd"
-
-sens_summary_rel <- aggregate(RelErr_final ~ TTYear + sigma_CPUE, data = sens_df, FUN = function(x) mean(x, na.rm = TRUE))
-colnames(sens_summary_rel)[3] <- "RelErr_final_mean"
-
-sens_fail <- aggregate(success ~ TTYear + sigma_CPUE, data = sens_df, FUN = function(x) 1 - mean(x, na.rm = TRUE))
-colnames(sens_fail)[3] <- "FailRate"
-
-sens_summary <- merge(sens_summary, sens_summary_sd, by = c("TTYear", "sigma_CPUE"))
-sens_summary <- merge(sens_summary, sens_summary_rel, by = c("TTYear", "sigma_CPUE"))
-sens_summary <- merge(sens_summary, sens_fail, by = c("TTYear", "sigma_CPUE"))
-
-write.csv(sens_summary, file.path(out_tab, "sensitivity_summary.csv"), row.names = FALSE)
-
-# 図を保存
-save_png(file.path(out_fig, "sensitivity_rmse_heatmap.png"), width = 900, height = 600, plot_fun = function() {
-  plot_sensitivity_heatmap(sens_summary)
-})
-
-# 画面にも表示（RMD用）
-plot_sensitivity_heatmap(sens_summary)
 ```
 
 
-# 5) HCRの形の図示（hockey と Type2）
+# 5) HCRの形の図示（Hockey と Type2）
 
 ```{r}
-# 教材として分かりやすいようにKは固定値を使う
+# 教材として切り替えやすいようにKは固定値を使う
 K_ref <- K
 
 # Hockey-stick
@@ -214,7 +274,7 @@ plot_2k_shape(AAV_t = 0.2, BT = 0.75, PL = 0.7, PB = 0.0,
 # 6) MSEの流れを手動で確認（教育用）
 
 ```{r}
-# MSEの流れ：OM → Obs → Assess → HCR → 次年Catch
+# MSEの流れ：OM -> Obs -> Assess -> HCR -> 次年Catch
 management_start <- 10
 # Fの年変動（管理開始前の実漁獲に反映）
 F_mult_pre <- rlnorm(TTYear, meanlog = -0.5 * sigma_F^2, sdlog = sigma_F)
@@ -231,10 +291,10 @@ B_demo[1] <- B1
 C_demo[1] <- CR * F_mult_pre[1] * B_demo[1]
 
 for (t in 1:(TT_demo - 1)) {
-  # 1) OM（真の資源動態）
+  # 1) OM：真の資源動態
   B_demo[t + 1] <- om_step_schaefer(B_demo[t], C_demo[t], r, K)
 
-  # 2) Obs（Index観測）
+  # 2) Obs：Index観測
   obs_t <- obs_cpue_lognormal(B_demo[t], q, sigma_CPUE)
   I_demo[t] <- obs_t$I_obs
 
@@ -245,7 +305,7 @@ for (t in 1:(TT_demo - 1)) {
   C_demo[t + 1] <- CR * F_mult_pre[t + 1] * B_demo[t + 1]
 }
 
-# 管理開始年（t = TT_demo）で評価とHCRを実行
+# 管理開始年（TT_demo）で評価とHCRを実施
 obs_last <- obs_cpue_lognormal(B_demo[TT_demo], q, sigma_CPUE)
 I_demo[TT_demo] <- obs_last$I_obs
 Cobs_demo[TT_demo] <- C_demo[TT_demo]
@@ -261,9 +321,14 @@ C_next_demo <- h_demo$C_next
 
 cat("Demo year:", TT_demo, "  B_hat:", round(B_hat_demo, 2), "  C_next:", round(C_next_demo, 2), "\n")
 ```
-# 7) MSEをforループで回す（hockey vs Type2）
+# 7) MSEをforループで回す（Hockey vs Type2）
 
 ```{r}
+# CapはHCRパラメータで代替（直接capしない）
+beta_hcr <- 0.6  # 例：最大漁獲率（cap相当）
+abc_ratio_cap <- 1.5  # 例：Type2のABC/Cbar上限相当
+clamp_2k <- log(abc_ratio_cap)
+
 # ------- hockey -------
 B_true_h <- rep(NA_real_, TTYear)
 C_true_h <- rep(NA_real_, TTYear)
@@ -288,16 +353,20 @@ for (t in 1:(TTYear - 1)) {
   if (t >= management_start) {
     assess <- if (use_cpp) fit_schaefer_ml_cpp(C_obs_h[1:t], I_obs_h[1:t]) else fit_schaefer_ml(C_obs_h[1:t], I_obs_h[1:t])
 
-    if (isTRUE(assess$success)) {
+    if (isTRUE(assess$success) && is.finite(assess$B_hat[t])) {
       fit_success_h[t] <- TRUE
       B_hat_h[t] <- assess$B_hat[t]
+    } else {
+      # 失敗時は真値にフォールバック（教材用の安定化）
+      B_hat_h[t] <- B_true_h[t]
     }
 
-    # Hockey-stick（Kは固定値を使う）
+    # Hockey-stickは固定値を使う
     Bban <- 0.3 * K
     Blim <- 0.6 * K
-    h_out <- hcr_hockey_stick(B_hat_h[t], beta = 0.8, Bban = Bban, Blim = Blim)
+    h_out <- hcr_hockey_stick(B_hat_h[t], beta = beta_hcr, Bban = Bban, Blim = Blim)
     C_next <- h_out$C_next
+
 
     # 失敗時のガード
     if (!is.finite(C_next) || C_next < 0) C_next <- C_true_h[t]
@@ -344,8 +413,9 @@ for (t in 1:(TTYear - 1)) {
 
     h_out <- hcr_new2kei_2k(C_obs_2k[1:t], I_obs_2k[1:t],
                             n = 5, BT = 0.75, PL = 0.7, PB = 0.0,
-                            beta_2k = 0.6, delta = 0.3, lambda = 0.3, clamp = 50)
+                            beta_2k = beta_hcr, delta = 0.3, lambda = 0.3, clamp = clamp_2k)
     C_next <- h_out$ABC_t
+
 
     # 失敗時のガード
     if (!is.finite(C_next) || C_next < 0) C_next <- C_true_2k[t]
@@ -372,64 +442,49 @@ mse_summary <- rbind(mse_sum_h, mse_sum_2k)
 mse_summary
 write.csv(mse_summary, file.path(out_tab, "mse_summary.csv"), row.names = FALSE)
 
-# MSE可視化（ggplot）
-plot_mse_timeseries <- function(Year, B_true_h, B_true_2k, C_true_h, C_true_2k, I_obs_h, I_obs_2k, management_start) {
+# MSE可視化（参照デザインに合わせて簡略化）
+plot_mse_simple <- function(Year, B_true_h, B_true_2k, C_true_h, C_true_2k, I_obs_h, I_obs_2k) {
   df_bio <- rbind(
-    data.frame(Year = Year, value = B_true_h, HCR = "Hockey", Series = "Biomass"),
-    data.frame(Year = Year, value = B_true_2k, HCR = "Type2", Series = "Biomass"),
-    data.frame(Year = Year, value = I_obs_h * 20, HCR = "Hockey", Series = "20 x Index"),
-    data.frame(Year = Year, value = I_obs_2k * 20, HCR = "Type2", Series = "20 x Index")
+    data.frame(Year = Year, Biomass = B_true_h, Index = I_obs_h * 20, HCR = "Hockey"),
+    data.frame(Year = Year, Biomass = B_true_2k, Index = I_obs_2k * 20, HCR = "Type2")
   )
 
-  p_bio <- ggplot(df_bio, aes(x = Year, y = value, color = HCR, linetype = Series)) +
-    geom_line(size = 1) +
-    scale_y_zero() +
-    geom_vline(xintercept = Year[management_start], linetype = 2, color = "gray40") +
-    scale_color_manual(values = c("Hockey" = "black", "Type2" = "blue")) +
-    scale_linetype_manual(values = c("Biomass" = "solid", "20 x Index" = "dashed")) +
-    labs(x = "Year", y = "Biomass", title = "Biomass (MSE)", color = NULL, linetype = NULL) +
+  p_bio <- ggplot(df_bio, aes(x = Year)) +
+    ylab("Scaled abundance indices and Biomass") + xlab("") +
+    geom_bar(aes(y = Biomass), stat = "identity") +
+    geom_line(aes(y = Index, col = "Index*20")) +
+    geom_point(aes(y = Index, col = "Index*20")) +
+    scale_x_continuous(expand = c(0, 0), limits = c(min(Year) - 0.5, max(Year) + 0.5),
+                       breaks = seq(min(Year), max(Year), 5)) +
+    scale_color_manual(values = c("Index*20" = "darkorange"), name = NULL) +
+    facet_wrap(~HCR, ncol = 1) +
     theme_minimal(base_size = 12)
 
-  df_catch <- data.frame(
-    Year = rep(Year, 2),
-    Catch = c(C_true_h, C_true_2k),
-    HCR = rep(c("Hockey", "Type2"), each = length(Year))
+  df_catch <- rbind(
+    data.frame(Year = Year, Catch = C_true_h, HCR = "Hockey"),
+    data.frame(Year = Year, Catch = C_true_2k, HCR = "Type2")
   )
 
-  p_catch <- ggplot(df_catch, aes(x = Year, y = Catch, color = HCR)) +
-    geom_line(size = 1) +
-    scale_y_zero() +
-    geom_vline(xintercept = Year[management_start], linetype = 2, color = "gray40") +
-    scale_color_manual(values = c("Hockey" = "black", "Type2" = "blue")) +
-    labs(x = "Year", y = "Catch", title = "Catch (MSE)", color = NULL) +
+  p_catch <- ggplot(df_catch, aes(x = Year)) +
+    ylab("Catch") + xlab("") +
+    geom_bar(aes(y = Catch), stat = "identity") +
+    scale_x_continuous(expand = c(0, 0), limits = c(min(Year) - 0.5, max(Year) + 0.5),
+                       breaks = seq(min(Year), max(Year), 5)) +
+    facet_wrap(~HCR, ncol = 1) +
     theme_minimal(base_size = 12)
 
-  df_index <- data.frame(
-    Year = rep(Year, 2),
-    Index = c(I_obs_h, I_obs_2k),
-    HCR = rep(c("Hockey", "Type2"), each = length(Year))
-  )
-
-  p_index <- ggplot(df_index, aes(x = Year, y = Index, color = HCR)) +
-    geom_point(size = 1.6) +
-    scale_y_zero() +
-    geom_vline(xintercept = Year[management_start], linetype = 2, color = "gray40") +
-    scale_color_manual(values = c("Hockey" = "black", "Type2" = "blue")) +
-    labs(x = "Year", y = "Index", title = "Observed Index (MSE)", color = NULL) +
-    theme_minimal(base_size = 12)
-
-  draw_gg_stack(list(p_bio, p_catch, p_index))
+  draw_gg_stack(list(p_bio, p_catch), heights = c(2, 1.5))
 }
 
 # 図を保存
 save_png(file.path(out_fig, "mse_timeseries_compare.png"), width = 900, height = 900, plot_fun = function() {
-  plot_mse_timeseries(Year, B_true_h, B_true_2k, C_true_h, C_true_2k, I_obs_h, I_obs_2k, management_start)
+  plot_mse_simple(Year, B_true_h, B_true_2k, C_true_h, C_true_2k, I_obs_h, I_obs_2k)
 })
 
-# 画面にも表示（RMD用）
-plot_mse_timeseries(Year, B_true_h, B_true_2k, C_true_h, C_true_2k, I_obs_h, I_obs_2k, management_start)
+# 画面にも表示（Rmd用）
+plot_mse_simple(Year, B_true_h, B_true_2k, C_true_h, C_true_2k, I_obs_h, I_obs_2k)
 ```
-# 8) 生成物のパス一覧
+# 8) 出力ファイルの一覧
 
 ```{r}
 cat("\n--- output/fig ---\n")

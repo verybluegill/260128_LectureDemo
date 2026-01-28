@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # (saved as UTF-8, no BOM)
 
-# ---- 謖・ｨ・----
+# ---- 指標計算 ----
 calc_rmse <- function(x, y) {
   sqrt(mean((x - y)^2, na.rm = TRUE))
 }
@@ -27,14 +27,14 @@ calc_mse_metrics <- function(B_true, C_true, K_true, management_start = 10, coll
   )
 }
 
-# ---- 繝励Ο繝・ヨ陬懷勧 ----
+# ---- 保存・描画ユーティリティ ----
 save_png <- function(path, width = 1000, height = 800, res = 120, plot_fun) {
   png(path, width = width, height = height, res = res)
   on.exit(dev.off())
   plot_fun()
 }
 
-# y軸の下限をゼロに固定
+# y軸の最小値を0に固定
 scale_y_zero <- function() {
   ggplot2::scale_y_continuous(limits = c(0, NA), expand = c(0, 0.05))
 }
@@ -53,6 +53,14 @@ draw_gg_stack <- function(plots, heights = NULL) {
   invisible(NULL)
 }
 
+plot_theme_basic <- function() {
+  ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(
+      legend.position = "top",
+      panel.grid.minor = ggplot2::element_blank()
+    )
+}
+
 plot_ts_case <- function(years, B_true, C_true, I_obs, vline_year = NULL, main_title = "") {
   df_bio <- data.frame(
     Year = rep(years, 2),
@@ -61,10 +69,11 @@ plot_ts_case <- function(years, B_true, C_true, I_obs, vline_year = NULL, main_t
   )
   p_bio <- ggplot2::ggplot(df_bio, ggplot2::aes(x = Year, y = value, color = series)) +
     ggplot2::geom_line(size = 1) +
+    ggplot2::geom_point(size = 1.6) +
     scale_y_zero() +
     ggplot2::labs(x = "Year", y = "Biomass", title = main_title, color = NULL) +
-    ggplot2::scale_color_manual(values = c("Biomass" = "black", "20 x Index" = "blue")) +
-    ggplot2::theme_minimal(base_size = 12)
+    ggplot2::scale_color_manual(values = c("Biomass" = "black", "20 x Index" = "darkorange")) +
+    plot_theme_basic()
 
   if (!is.null(vline_year)) {
     p_bio <- p_bio + ggplot2::geom_vline(xintercept = vline_year, linetype = 2, color = "gray40")
@@ -73,9 +82,10 @@ plot_ts_case <- function(years, B_true, C_true, I_obs, vline_year = NULL, main_t
   df_catch <- data.frame(Year = years, Catch = C_true)
   p_catch <- ggplot2::ggplot(df_catch, ggplot2::aes(x = Year, y = Catch)) +
     ggplot2::geom_line(color = "black", size = 1) +
+    ggplot2::geom_point(color = "black", size = 1.6) +
     scale_y_zero() +
     ggplot2::labs(x = "Year", y = "Catch") +
-    ggplot2::theme_minimal(base_size = 12)
+    plot_theme_basic()
 
   if (!is.null(vline_year)) {
     p_catch <- p_catch + ggplot2::geom_vline(xintercept = vline_year, linetype = 2, color = "gray40")
@@ -86,7 +96,7 @@ plot_ts_case <- function(years, B_true, C_true, I_obs, vline_year = NULL, main_t
     ggplot2::geom_point(color = "black", size = 1.6) +
     scale_y_zero() +
     ggplot2::labs(x = "Year", y = "Index") +
-    ggplot2::theme_minimal(base_size = 12)
+    plot_theme_basic()
 
   if (!is.null(vline_year)) {
     p_index <- p_index + ggplot2::geom_vline(xintercept = vline_year, linetype = 2, color = "gray40")
@@ -104,10 +114,11 @@ plot_true_vs_hat <- function(years, B_true, B_hat, main_title = "") {
 
   p <- ggplot2::ggplot(df, ggplot2::aes(x = Year, y = Biomass, color = series)) +
     ggplot2::geom_line(size = 1) +
+    ggplot2::geom_point(size = 1.6) +
     scale_y_zero() +
     ggplot2::labs(x = "Year", y = "Biomass", title = main_title, color = NULL) +
     ggplot2::scale_color_manual(values = c("True" = "black", "Estimated" = "red")) +
-    ggplot2::theme_minimal(base_size = 12)
+    plot_theme_basic()
 
   print(p)
   invisible(p)
