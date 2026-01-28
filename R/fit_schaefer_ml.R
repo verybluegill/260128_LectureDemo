@@ -91,6 +91,16 @@ fit_schaefer_ml <- function(C_obs, CPUE_obs, start_list = NULL, control = list(m
   )
 
   B_hat <- predict_B_schaefer(C_obs, est["r"], est["K"], est["B1"])
+  if (any(!is.finite(B_hat))) {  # 変更点: 推定後B_hatの健全性チェック
+    return(list(
+      success = FALSE,
+      message = "B_hat is not finite under estimated parameters",
+      par = est,
+      B_hat = B_hat,
+      nll = best$nll,
+      converged = best$converged
+    ))
+  }
 
   list(
     success = TRUE,
@@ -159,6 +169,7 @@ fit_schaefer_ml_cpp <- function(C_obs, CPUE_obs, start_list = NULL, control = li
       // [[Rcpp::export]]
       double nll_schaefer_cpp(NumericVector par, NumericVector C_obs, NumericVector CPUE_obs,
                               IntegerVector idx) {
+        if (par.size() != 5) return 1e12; // 変更点: par長チェック
         double r = std::exp(par[0]);
         double K = std::exp(par[1]);
         double q = std::exp(par[2]);
@@ -195,6 +206,7 @@ fit_schaefer_ml_cpp <- function(C_obs, CPUE_obs, start_list = NULL, control = li
   # 負の対数尤度（C++）呼び出し
   idx_cpp <- as.integer(idx)
   nll_fun <- function(par) {
+    if (length(par) != 5L) return(1e12)  # 変更点: 安全チェック
     val <- .cpp_env$nll_schaefer_cpp(par, C_obs, CPUE_obs, idx_cpp)
     if (!is.finite(val)) 1e12 else val
   }
@@ -219,6 +231,8 @@ fit_schaefer_ml_cpp <- function(C_obs, CPUE_obs, start_list = NULL, control = li
 
   best <- list(nll = Inf, par = NA, converged = FALSE)
   for (st in start_list) {
+    if (length(st) != 5L) next
+    
     fit <- tryCatch(
       optim(st, nll_fun, method = "BFGS", control = control),
       error = function(e) NULL
@@ -250,6 +264,16 @@ fit_schaefer_ml_cpp <- function(C_obs, CPUE_obs, start_list = NULL, control = li
   )
 
   B_hat <- .cpp_env$predict_B_schaefer_cpp(C_obs, est["r"], est["K"], est["B1"])
+  if (any(!is.finite(B_hat))) {  # 変更点: 推定後B_hatの健全性チェック
+    return(list(
+      success = FALSE,
+      message = "B_hat is not finite under estimated parameters",
+      par = est,
+      B_hat = B_hat,
+      nll = best$nll,
+      converged = best$converged
+    ))
+  }
 
   list(
     success = TRUE,
