@@ -4,18 +4,23 @@
 # ホッケースティックHCR（資源量ベース）
 hcr_hockey_stick <- function(B_hat, beta = 0.8, Bban, Blim) {
   if (Blim <= Bban) stop("Blim must be > Bban")
-
-  B_hat <- pmax(B_hat, 0)
+  
+  if (any(!is.finite(B_hat))) stop("B_hat contains non-finite (Inf/NaN)")  
+  if (!is.finite(beta) || beta < 0) stop("beta must be non-negative")      
+  if (!is.finite(Bban) || !is.finite(Blim)) stop("Bban/Blim must be finite") 
+  
+  B_hat <- pmax(B_hat, 0)  # 負の推定値は0に丸める
+  
   h <- rep(NA_real_, length(B_hat))
-
+  
   h[B_hat <= Bban] <- 0
   h[B_hat >= Blim] <- beta
-
+  
   mid <- B_hat > Bban & B_hat < Blim
   h[mid] <- beta * (B_hat[mid] - Bban) / (Blim - Bban)
-
+  
   C_next <- h * B_hat
-
+  
   list(h = h, C_next = C_next)
 }
 
