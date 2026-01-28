@@ -26,6 +26,7 @@ packrat/src/
 *.png
 *.gif
 *.csv
+*.html
 frames_B/
 frames_C/
 frames_CPUE/
