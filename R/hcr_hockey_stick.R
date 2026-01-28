@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # (saved as UTF-8, no BOM)
-
+# 本当はHockey-stickのHCRはFmsyを参照すべき!
 # ホッケースティックHCR（資源量ベース）
 hcr_hockey_stick <- function(B_hat, beta = 0.8, Bban, Blim) {
   if (Blim <= Bban) stop("Blim must be > Bban")
