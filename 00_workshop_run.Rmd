@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 ```{r}
 rm(list = ls())
-set.seed(123)
+set.seed(0128)
 options(stringsAsFactors = FALSE)
 
 if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -113,10 +113,10 @@ if (do_sensitivity) {
   # 感度解析用：1ケース分の推定B時系列を作る
   run_sens_ts <- function(TT, sigma_CPUE, catch_report = 1, seed = NULL) {
     if (!is.null(seed)) set.seed(seed)
-    F_mult_tmp <- rlnorm(TT, meanlog = -0.5 * sigma_F^2, sdlog = sigma_F)
-    om_tmp <- om_schaefer_sim(TTYear = TT, r = r, K = K, B1 = D1 * K, CR = CR, CR_mult = F_mult_tmp)
-    obs_tmp <- obs_cpue_lognormal(om_tmp$B_true, q, sigma_CPUE)
-    C_obs_tmp <- om_tmp$C_true * catch_report
+    B_true_tmp <- B_true[1:TT]
+    C_true_tmp <- Catch[1:TT]
+    obs_tmp <- obs_cpue_lognormal(B_true_tmp, q, sigma_CPUE)
+    C_obs_tmp <- C_true_tmp * catch_report
     fit_tmp <- if (use_cpp) fit_schaefer_ml_cpp(C_obs_tmp, obs_tmp$I_obs) else fit_schaefer_ml(C_obs_tmp, obs_tmp$I_obs)
 
     if (isTRUE(fit_tmp$success)) {
@@ -128,7 +128,7 @@ if (do_sensitivity) {
     data.frame(
       Year = 1:TT,
       B_hat = B_hat_tmp,
-      B_true = om_tmp$B_true,
+      B_true = B_true_tmp,
       TTYear = TT,
       sigma_CPUE = sigma_CPUE,
       catch_report = catch_report
