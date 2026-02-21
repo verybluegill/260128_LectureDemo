@@ -182,13 +182,13 @@ if (do_sensitivity) {
   
     # 追加: True用のデータ（Scenarioを"True"に固定して色凡例に載せる）
     df_tt_true <- df_tt
-    df_tt_true$Scenario <- "True"   # ←追加（凡例に True を出すため）
+    df_tt_true$Scenario <- "True"   # （凡例に True を出すため）
   
     p_tt <- ggplot() +
       geom_line(data = df_tt, aes(x = Year, y = B_hat, color = Scenario), size = 1) +
       geom_line(data = df_tt_true, aes(x = Year, y = B_true, color = Scenario), size = 1.1) +
       labs(x = "Year", y = "Biomass", title = "Sensitivity: TTYear") +
-      scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +  # ←追加
+      scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +  
       theme_minimal(base_size = 12)
     print(p_tt)
   }
@@ -197,13 +197,13 @@ if (do_sensitivity) {
   if (do_sens_sigma) {
     df_sg <- subset(sens_ts_df, Group == "Sigma")
     df_sg_true <- df_sg
-    df_sg_true$Scenario <- "True"  # ←追加
+    df_sg_true$Scenario <- "True"  
   
     p_sg <- ggplot() +
       geom_line(data = df_sg, aes(x = Year, y = B_hat, color = Scenario), size = 1) +
       geom_line(data = df_sg_true, aes(x = Year, y = B_true, color = Scenario), size = 1.1) +
       labs(x = "Year", y = "Biomass", title = "Sensitivity: sigma") +
-      scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +  # ←追加
+      scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +  
       theme_minimal(base_size = 12)
     print(p_sg)
   }
@@ -212,13 +212,13 @@ if (do_sensitivity) {
   if (do_sens_catch_under) {
     df_cu <- subset(sens_ts_df, Group == "CatchUnder")
     df_cu_true <- df_cu
-    df_cu_true$Scenario <- "True"  # ←追加
+    df_cu_true$Scenario <- "True" 
   
     p_cu <- ggplot() +
       geom_line(data = df_cu, aes(x = Year, y = B_hat, color = Scenario), size = 1) +
       geom_line(data = df_cu_true, aes(x = Year, y = B_true, color = Scenario), size = 1.1) +
       labs(x = "Year", y = "Biomass", title = "Sensitivity: underreported catch") +
-      scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +  # ←追加
+      scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +  
       theme_minimal(base_size = 12)
     print(p_cu)
   }
@@ -315,22 +315,33 @@ plot_mse_2 <- function(Year, h_out, t2_out, index_scale = 20) {
   draw_gg_stack(list(p_bio, p_catch), heights = c(2, 1.5))
 }
 
-plot_mse_estimated <- function(Year, h_out, t2_out, index_scale = 20) {
+plot_mse_estimated <- function(Year, h_out, t2_out, K_ref, index_scale = 20, Bban_ratio = 0.3, Blim_ratio = 0.6) {
 
   df_bio_hat <- rbind(
     data.frame(Year = Year, Biomass = h_out$B_hat,  Index = h_out$I_obs  * index_scale, HCR = "Hockey (estimated Fmsy)"),
     data.frame(Year = Year, Biomass = t2_out$B_hat, Index = t2_out$I_obs * index_scale, HCR = "Type2")
   )
+  hcr_lines <- data.frame(
+    HCR = "Hockey (estimated Fmsy)",
+    yint = c(Bban_ratio * K_ref, Blim_ratio * K_ref)
+  )
+  bio_q3 <- as.numeric(quantile(df_bio_hat$Biomass, probs = 0.75, na.rm = TRUE))
+  bio_iqr <- IQR(df_bio_hat$Biomass, na.rm = TRUE)
+  bio_upper <- bio_q3 + 1.5 * bio_iqr
+  index_upper <- max(df_bio_hat$Index, na.rm = TRUE) * 1.1
+  y_upper <- max(bio_upper, index_upper, hcr_lines$yint)
 
   p_bio_hat <- ggplot(df_bio_hat, aes(x = Year)) +
     ylab("Scaled abundance indices and Estimated Biomass") + xlab("") +
     geom_bar(aes(y = Biomass), stat = "identity") +
     geom_line(aes(y = Index, col = "Index*20")) +
     geom_point(aes(y = Index, col = "Index*20")) +
+    geom_hline(data = hcr_lines, aes(yintercept = yint), linetype = "dashed", color = "red") +
     scale_x_continuous(expand = c(0, 0),
                        limits = c(min(Year) - 0.5, max(Year) + 0.5),
                        breaks = seq(min(Year), max(Year), 5)) +
     scale_color_manual(values = c("Index*20" = "darkorange"), name = NULL) +
+    coord_cartesian(ylim = c(0, y_upper)) +
     facet_wrap(~HCR, ncol = 1) +
     theme_minimal(base_size = 12)
 
@@ -338,7 +349,7 @@ plot_mse_estimated <- function(Year, h_out, t2_out, index_scale = 20) {
 }
 
 plot_mse_2(Year, h_out, t2_out)
-plot_mse_estimated(Year, h_out, t2_out)
+plot_mse_estimated(Year, h_out, t2_out, K_ref = K, Bban_ratio = 0.3, Blim_ratio = 0.6)
 
 ```
 
