@@ -47,7 +47,7 @@ mse_loop <- function(TTYear, r, K, B1, q, sigma_CPUE,
 
     if (t >= management_start) {
       if (!is.null(B_input) && length(B_input) >= t && is.finite(B_input[t])) {
-        assess <- list(success = FALSE, B_hat = rep(NA_real_, t), par = c(K = NA_real_))
+        assess <- list(success = FALSE, B_hat = rep(NA_real_, t), par = c(K = NA_real_, r = NA_real_))
         fit_success[t] <- FALSE
         B_hat[t] <- NA_real_
         K_hat[t] <- NA_real_
@@ -82,8 +82,10 @@ mse_loop <- function(TTYear, r, K, B1, q, sigma_CPUE,
         K_ref <- if (hcr_par$K_ref_type == "estimated" && is.finite(K_hat[t])) K_hat[t] else K
         Bban <- hcr_par$Bban_ratio * K_ref
         Blim <- hcr_par$Blim_ratio * K_ref
+        r_hat_t <- if (!is.null(assess$par) && "r" %in% names(assess$par) && is.finite(assess$par["r"])) assess$par["r"] else NA_real_
+        Fmsy_ref <- if (is.finite(r_hat_t)) r_hat_t / 2 else r / 2
 
-        h_out <- hcr_hockey_stick(B_for_hcr, beta = hcr_par$beta, Bban = Bban, Blim = Blim)
+        h_out <- hcr_hockey_stick(B_for_hcr, beta = hcr_par$beta, Bban = Bban, Blim = Blim, Fmsy = Fmsy_ref)
         C_next <- h_out$C_next
       } else {
         h_out <- hcr_new2kei_2k(C_obs[1:t], I_obs[1:t],

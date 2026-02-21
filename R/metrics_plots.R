@@ -152,7 +152,7 @@ plot_hockey_shape <- function(K_ref, beta = 0.8, Bban_ratio = 0.2, Blim_ratio = 
     ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_vline(xintercept = c(Bban, Blim), linetype = 2, color = "gray40") +
     scale_y_zero() +
-    ggplot2::labs(x = "Biomass", y = "Harvest rate", title = "Hockey-stick HCR") +
+    ggplot2::labs(x = "Biomass", y = "F/Fmsy", title = "Hockey-stick HCR") +
     ggplot2::theme_minimal(base_size = 12)
 
   print(p)
