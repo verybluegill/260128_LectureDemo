@@ -243,7 +243,8 @@ plot_2k_shape(AAV_t = 0.2, BT = 0.8, PL = 0.7, PB = 0.0,
 
 ```{r fig.width=11, fig.height=8}
 # ---- HCRパラメータ----
-beta_hcr <- 0.25          
+beta_hcr <- 0.8          
+beta_2k <- 0.25
 abc_ratio_cap <- 1.5
 clamp_2k <- log(abc_ratio_cap)
 management_start <- 10
@@ -263,13 +264,13 @@ t2_out <- mse_loop(
   CR_init = CR, management_start = management_start,
   hcr_type = "2k",
   hcr_par = list(n = 5, BT = 0.75, PL = 0.7, PB = 0.0,
-                 beta_2k = beta_hcr, delta = 0.3, lambda = 0.3, clamp = clamp_2k),
+                 beta_2k = beta_2k, delta = 0.3, lambda = 0.3, clamp = clamp_2k),
   use_cpp = use_cpp
 )
 
 # ---- 指標 ----
 mse_sum_h  <- calc_mse_metrics(h_out$B_true,  h_out$C_true,  K_true = K, management_start = management_start)
-mse_sum_h$HCR <- "Hockey (estimated)"
+mse_sum_h$HCR <- "Hockey (estimated Fmsy)"
 
 mse_sum_2k <- calc_mse_metrics(t2_out$B_true, t2_out$C_true, K_true = K, management_start = management_start)
 mse_sum_2k$HCR <- "Type2"
@@ -281,12 +282,12 @@ mse_summary
 plot_mse_2 <- function(Year, h_out, t2_out, index_scale = 20) {
 
   df_bio <- rbind(
-    data.frame(Year = Year, Biomass = h_out$B_true,  Index = h_out$I_obs  * index_scale, HCR = "Hockey (estimated)"),
+    data.frame(Year = Year, Biomass = h_out$B_true,  Index = h_out$I_obs  * index_scale, HCR = "Hockey (estimated Fmsy)"),
     data.frame(Year = Year, Biomass = t2_out$B_true, Index = t2_out$I_obs * index_scale, HCR = "Type2")
   )
 
   p_bio <- ggplot(df_bio, aes(x = Year)) +
-    ylab("Scaled abundance indices and Biomass") + xlab("") +
+    ylab("Scaled abundance indices and True Biomass") + xlab("") +
     geom_bar(aes(y = Biomass), stat = "identity") +
     geom_line(aes(y = Index, col = "Index*20")) +
     geom_point(aes(y = Index, col = "Index*20")) +
@@ -298,7 +299,7 @@ plot_mse_2 <- function(Year, h_out, t2_out, index_scale = 20) {
     theme_minimal(base_size = 12)
 
   df_catch <- rbind(
-    data.frame(Year = Year, Catch = h_out$C_true,  HCR = "Hockey (estimated)"),
+    data.frame(Year = Year, Catch = h_out$C_true,  HCR = "Hockey (estimated Fmsy)"),
     data.frame(Year = Year, Catch = t2_out$C_true, HCR = "Type2")
   )
 
@@ -314,7 +315,30 @@ plot_mse_2 <- function(Year, h_out, t2_out, index_scale = 20) {
   draw_gg_stack(list(p_bio, p_catch), heights = c(2, 1.5))
 }
 
+plot_mse_estimated <- function(Year, h_out, t2_out, index_scale = 20) {
+
+  df_bio_hat <- rbind(
+    data.frame(Year = Year, Biomass = h_out$B_hat,  Index = h_out$I_obs  * index_scale, HCR = "Hockey (estimated Fmsy)"),
+    data.frame(Year = Year, Biomass = t2_out$B_hat, Index = t2_out$I_obs * index_scale, HCR = "Type2")
+  )
+
+  p_bio_hat <- ggplot(df_bio_hat, aes(x = Year)) +
+    ylab("Scaled abundance indices and Estimated Biomass") + xlab("") +
+    geom_bar(aes(y = Biomass), stat = "identity") +
+    geom_line(aes(y = Index, col = "Index*20")) +
+    geom_point(aes(y = Index, col = "Index*20")) +
+    scale_x_continuous(expand = c(0, 0),
+                       limits = c(min(Year) - 0.5, max(Year) + 0.5),
+                       breaks = seq(min(Year), max(Year), 5)) +
+    scale_color_manual(values = c("Index*20" = "darkorange"), name = NULL) +
+    facet_wrap(~HCR, ncol = 1) +
+    theme_minimal(base_size = 12)
+
+  print(p_bio_hat)
+}
+
 plot_mse_2(Year, h_out, t2_out)
+plot_mse_estimated(Year, h_out, t2_out)
 
 ```
 
